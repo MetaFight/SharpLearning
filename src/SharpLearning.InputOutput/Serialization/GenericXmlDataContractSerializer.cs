@@ -44,14 +44,15 @@ namespace SharpLearning.InputOutput.Serialization
             var settings = new XmlWriterSettings { Indent = true };
 
             using (var texWriter = writer())
+            using (var xmlWriter = XmlWriter.Create(texWriter, settings))
+            using (var xmlDictionaryWriter = XmlDictionaryWriter.CreateDictionaryWriter(xmlWriter))
             {
-                using (var xmlWriter = XmlWriter.Create(texWriter, settings))
-                {
-                    var serializer = new DataContractSerializer(typeof(T), m_knownTypes, int.MaxValue,
-                        false, true, null, new GenericResolver());
+                var serializer = new DataContractSerializer(typeof(T), m_knownTypes);
+                serializer.WriteObject(xmlDictionaryWriter, data, new GenericResolver());
 
-                    serializer.WriteObject(xmlWriter, data);
-                }
+                //var serializer = new DataContractSerializer(typeof(T), m_knownTypes, int.MaxValue,
+                //    false, true, null, new GenericResolver());
+                //serializer.WriteObject(xmlWriter, data);
             }
         }
 
@@ -64,14 +65,17 @@ namespace SharpLearning.InputOutput.Serialization
         public T Deserialize<T>(Func<TextReader> reader)
         {
             using(var textReader = reader())
+            using (var xmlReader = XmlReader.Create(textReader))
+            using (var xmlDictionaryReader = XmlDictionaryReader.CreateDictionaryReader(xmlReader))
             {
-                using (var xmlReader = XmlReader.Create(textReader))
-                {
-                    var serializer = new DataContractSerializer(typeof(T), m_knownTypes, int.MaxValue,
-                        false, true, null, new GenericResolver());
+                var serializer = new DataContractSerializer(typeof(T), m_knownTypes);
 
-                    return (T)serializer.ReadObject(xmlReader);
-                }
+                return (T)serializer.ReadObject(xmlDictionaryReader, true, new GenericResolver());
+
+                //var serializer = new DataContractSerializer(typeof(T), m_knownTypes, int.MaxValue,
+                //    false, true, null, new GenericResolver());
+
+                //return (T)serializer.ReadObject(xmlReader);
             }
         }
 
