@@ -15,6 +15,77 @@ namespace SharpLearning.Neural.Test.Cntk
     public class CntkTest
     {
         //[TestMethod]
+        public void Learn_CNN_Using_TextFormatMinibatchSource_As_Source()
+        {
+            var featureStreamName = "features";
+            var labelsStreamName = "labels";
+
+            var imageDim = new int[] { 28, 28, 1 };
+            var imageSize = 28 * 28;
+            var numClasses = 10;
+
+            string ImageDataFolder = @"E:\Git\CNTK\Tests\EndToEndTests\Image\Data";
+
+            IList<StreamConfiguration> streamConfigurations = new StreamConfiguration[]
+                { new StreamConfiguration(featureStreamName, imageSize), new StreamConfiguration(labelsStreamName, numClasses) };
+
+            // build the network
+            var device = CntkLayers.Device;
+            var input = CNTKLib.InputVariable(imageDim, DataType.Float, featureStreamName);
+            var scaledInput = CNTKLib.ElementTimes(Constant.Scalar<float>(0.00390625f, device), input);
+            var classifierOutput = CreateNetwork(input, numClasses);
+            
+            var labels = CNTKLib.InputVariable(new int[] { numClasses }, DataType.Float, labelsStreamName);
+            var trainingLoss = CNTKLib.CrossEntropyWithSoftmax(new Variable(classifierOutput), labels, "lossFunction");
+            var prediction = CNTKLib.ClassificationError(new Variable(classifierOutput), labels, "classificationError");
+
+            // prepare training data
+            var minibatchSource = MinibatchSource.TextFormatMinibatchSource(
+                Path.Combine(ImageDataFolder, "Train_cntk_text.txt"), streamConfigurations, MinibatchSource.InfinitelyRepeat);
+
+            var featureStreamInfo = minibatchSource.StreamInfo(featureStreamName);
+            var labelStreamInfo = minibatchSource.StreamInfo(labelsStreamName);
+
+            // set per sample learning rate
+            CNTK.TrainingParameterScheduleDouble learningRatePerSample = new CNTK.TrainingParameterScheduleDouble(
+                0.0003125, 1);
+
+            IList<Learner> parameterLearners = new List<Learner>() { Learner.SGDLearner(classifierOutput.Parameters(), learningRatePerSample) };
+            var trainer = Trainer.CreateTrainer(classifierOutput, trainingLoss, prediction, parameterLearners);
+
+            //
+            const uint minibatchSize = 128;
+            int startEpochs = 5;
+            int epochs = startEpochs;
+            var accumulatedLoss = 0.0;
+
+            while (epochs > 0)
+            {
+                var minibatchData = minibatchSource.GetNextMinibatch(minibatchSize, device);
+                var arguments = new Dictionary<Variable, MinibatchData>
+                {
+                    { input, minibatchData[featureStreamInfo] },
+                    { labels, minibatchData[labelStreamInfo] }
+                };
+
+                trainer.TrainMinibatch(arguments, device);
+                accumulatedLoss += trainer.PreviousMinibatchSampleCount() * trainer.PreviousMinibatchLossAverage();
+
+                // MinibatchSource is created with MinibatchSource.InfinitelyRepeat.
+                // Batching will not end. Each time minibatchSource completes an sweep (epoch),
+                // the last minibatch data will be marked as end of a sweep. We use this flag
+                // to count number of epochs.
+                if (trainer.TotalNumberOfSamplesSeen() % 60000 == 0)//(minibatchData.Values.Any(a => a.sweepEnd))
+                {
+                    epochs--;
+                    var currentLoss = accumulatedLoss / 60000;                    
+                    Trace.WriteLine($"Epoch: {startEpochs - epochs}: Loss = {currentLoss} Examples seen: {trainer.TotalNumberOfSamplesSeen()}");
+                    accumulatedLoss = 0;
+                }
+            }
+        }
+
+        //[TestMethod]
         public void Learn_CNN_Using_F64Matrix_As_Source()
         {
             // read data
