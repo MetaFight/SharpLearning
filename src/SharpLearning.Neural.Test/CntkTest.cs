@@ -24,7 +24,7 @@ namespace SharpLearning.Neural.Test.Cntk
             var imageSize = 28 * 28;
             var numClasses = 10;
 
-            string ImageDataFolder = @"E:\Git\CNTK\Tests\EndToEndTests\Image\Data";
+            string imageDataFolder = @"...\CNTK\Tests\EndToEndTests\Image\Data";
 
             IList<StreamConfiguration> streamConfigurations = new StreamConfiguration[]
                 { new StreamConfiguration(featureStreamName, imageSize), new StreamConfiguration(labelsStreamName, numClasses) };
@@ -41,7 +41,7 @@ namespace SharpLearning.Neural.Test.Cntk
 
             // prepare training data
             var minibatchSource = MinibatchSource.TextFormatMinibatchSource(
-                Path.Combine(ImageDataFolder, "Train_cntk_text.txt"), streamConfigurations, MinibatchSource.InfinitelyRepeat);
+                Path.Combine(imageDataFolder, "Train_cntk_text.txt"), streamConfigurations, MinibatchSource.InfinitelyRepeat);
 
             var featureStreamInfo = minibatchSource.StreamInfo(featureStreamName);
             var labelStreamInfo = minibatchSource.StreamInfo(labelsStreamName);
