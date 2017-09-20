@@ -15,6 +15,52 @@ namespace SharpLearning.Neural.Test.Cntk
     public class CntkTest
     {
         //[TestMethod]
+        public void Learn_CNN_Check_GC_Load()
+        {
+            // input data
+            var inputDim = new int[] { 28, 28, 1 };
+            int numberOfClasses = 10;
+
+            var input = Variable.InputVariable(inputDim, DataType.Float);
+            var labels = Variable.InputVariable(new int[] { numberOfClasses }, DataType.Float);
+
+            // setup network
+            var network = CreateNetwork(input, numberOfClasses);
+            var loss = CNTKLib.CrossEntropyWithSoftmax(network, labels);
+            var evalError = CNTKLib.ClassificationError(network, labels);
+
+            var device = CntkLayers.Device;
+            Trace.WriteLine($"Using device: {device.Type}");
+
+            // setup learner
+            int minibatchSize = 128;
+            var learningRatePerSample = new CNTK.TrainingParameterScheduleDouble(0.0003125, 1);
+            var parameterLearners = new List<Learner>() { Learner.SGDLearner(network.Parameters(), learningRatePerSample) };
+            var trainer = Trainer.CreateTrainer(network, loss, evalError, parameterLearners);
+
+            // train the model
+            var random = new Random(23);
+            var numberOfBatchesToUse = 1000000000;
+
+            var features = new float[minibatchSize * inputDim.Aggregate((v1, v2) => v1 * v2)];
+            var oneOfNLabels = new float[minibatchSize * numberOfClasses];
+            var miniBatch = new Dictionary<Variable, Value>();
+
+            for (int i = 0; i < numberOfBatchesToUse; i++)
+            {
+                using (var batchFeatures = Value.CreateBatch<float>(inputDim, features, device))
+                using (var batchLabels = Value.CreateBatch<float>(new int[] { numberOfClasses }, oneOfNLabels, device))
+                {
+                    miniBatch.Add(input, batchFeatures);
+                    miniBatch.Add(labels, batchLabels);
+
+                    trainer.TrainMinibatch(miniBatch, device);
+                    miniBatch.Clear();
+                }
+            }
+        }
+
+        //[TestMethod]
         public void Learn_CNN_Using_TextFormatMinibatchSource_As_Source()
         {
             var featureStreamName = "features";
