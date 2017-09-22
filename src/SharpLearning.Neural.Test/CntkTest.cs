@@ -209,6 +209,8 @@ namespace SharpLearning.Neural.Test.Cntk
 
         static Function CreateNetwork(Variable input, int numberOfClasses)
         {
+            var random = new Random(232);
+
             var network = CntkLayers.Conv2D(input, 5, 5, 32);
             network = CntkLayers.Activation(network, Activation.ReLU);
             network = CntkLayers.Pool2D(network, 2, 2);
@@ -217,9 +219,13 @@ namespace SharpLearning.Neural.Test.Cntk
             network = CntkLayers.Activation(network, Activation.ReLU);
             network = CntkLayers.Pool2D(network, 2, 2);
 
+            network = CntkLayers.Dropout(network, dropoutRate: 0.5, seed: (uint)random.Next());
             network = CntkLayers.Dense(network, 256);
             network = CntkLayers.Activation(network, Activation.ReLU);
+
+            network = CntkLayers.Dropout(network, dropoutRate: 0.5, seed: (uint)random.Next());
             network = CntkLayers.Dense(network, numberOfClasses);
+
             return network;
         }
 

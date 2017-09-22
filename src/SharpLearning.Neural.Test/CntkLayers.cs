@@ -91,5 +91,10 @@ namespace SharpLearning.Neural.Test.Cntk
             return CNTKLib.Pooling(input, PoolingType.Max,
                 new int[] { poolW, poolH}, new int[] { strideW, strideH});
         }
+
+        public static Function Dropout(Variable input, double dropoutRate, uint seed)
+        {
+            return CNTKLib.Dropout(input, dropoutRate, seed);
+        }
     }
 }
